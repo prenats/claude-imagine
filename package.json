@@ -1,0 +1,72 @@
+{
+  "name": "claude-imagine",
+  "version": "0.1.0",
+  "description": "MCP server for generating images in Claude Code — supports multiple backends including SDXL, Flux Schnell, and Flux Dev with GPU acceleration",
+  "type": "module",
+  "license": "MIT",
+  "author": "prenats",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/prenats/claude-imagine.git"
+  },
+  "homepage": "https://github.com/prenats/claude-imagine#readme",
+  "bugs": {
+    "url": "https://github.com/prenats/claude-imagine/issues"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "claude",
+    "claude-code",
+    "image-generation",
+    "stable-diffusion",
+    "flux",
+    "sdxl",
+    "ai-tools",
+    "anthropic"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/models.d.ts",
+      "import": "./dist/models.js"
+    },
+    "./server": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "claude-imagine": "./dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "skills/",
+    "commands/",
+    "rules/",
+    "config.example.json",
+    "LICENSE",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "npm test && npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod": "^3.25"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
+  }
+}
