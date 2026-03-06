@@ -1,0 +1,51 @@
+{
+  "backend": "comfyui",
+  "server": {
+    "url": "http://localhost:8188"
+  },
+  "models": {
+    "sdxl_lightning_4step": {
+      "filename": "sdxl_lightning_4step.safetensors",
+      "displayName": "SDXL Lightning 4-Step",
+      "type": "checkpoint",
+      "tier": "fast",
+      "params": {
+        "steps": 4,
+        "cfg": 1.0,
+        "sampler": "euler",
+        "scheduler": "sgm_uniform"
+      }
+    },
+    "flux1-schnell": {
+      "filename": "flux1-schnell.safetensors",
+      "displayName": "Flux Schnell",
+      "type": "unet",
+      "tier": "high",
+      "params": {
+        "steps": 4,
+        "cfg": 1.0,
+        "sampler": "euler",
+        "scheduler": "simple",
+        "clip_name1": "clip_l.safetensors",
+        "clip_name2": "t5xxl_fp16.safetensors",
+        "vae_name": "ae.safetensors"
+      }
+    }
+  },
+  "imageTypes": {
+    "ICON": { "model": "sdxl_lightning_4step", "width": 512, "height": 512 },
+    "THUMBNAIL": { "model": "sdxl_lightning_4step" },
+    "BACKGROUND": { "model": "sdxl_lightning_4step" },
+    "TEXTURE": { "model": "sdxl_lightning_4step" },
+    "AVATAR": { "model": "flux1-schnell" },
+    "CONTENT": { "model": "flux1-schnell" },
+    "BANNER": { "model": "flux1-schnell" },
+    "PRODUCT": { "model": "flux1-schnell" },
+    "LOGO": { "model": "flux1-schnell" },
+    "HERO": { "model": "flux1-schnell", "width": 1344, "height": 768 },
+    "FEATURED": { "model": "flux1-schnell" }
+  },
+  "output": {
+    "dir": "generated"
+  }
+}
