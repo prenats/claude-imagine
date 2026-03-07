@@ -1,7 +1,7 @@
 {
   "name": "claude-imagine",
   "version": "0.1.0",
-  "description": "MCP server for generating images in Claude Code — supports multiple backends including SDXL, Flux Schnell, and Flux Dev with GPU acceleration",
+  "description": "MCP server for generating images in Claude Code — supports local image generation tools like ComfyUI and other backends",
   "type": "module",
   "license": "MIT",
   "author": "prenats",
