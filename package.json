@@ -1,6 +1,6 @@
 {
   "name": "claude-imagine",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server for generating images in Claude Code — supports local image generation tools like ComfyUI and other backends",
   "type": "module",
   "license": "MIT",
