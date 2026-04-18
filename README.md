@@ -42,6 +42,7 @@ When you're not coding, there are direct commands too. `/claude-imagine:image-ge
 - **Full Creative Control** — 15 styles, 12 moods, 12 compositions, 12 lighting options, 8 color palettes
 - **3 Quality Tiers** — fast / standard / high, auto-mapped to your fastest and best models
 - **Auto-Detection** — discovers your installed models and assigns them to quality tiers
+- **Model Pinning** — pin only the models you want for generation; other models on the server are ignored
 - **Smart Negative Prompts** — auto-generated per type and style (SDXL only)
 - **Pluggable Backends** — ComfyUI today, extensible architecture for future backends
 - **Flexible Scope** — install globally or per-project
@@ -70,7 +71,9 @@ The interactive installer will:
 1. Ask for install scope (global or per-project)
 2. Copy skills, commands, and rules to your Claude Code config
 3. Detect your ComfyUI server and discover installed models
-4. Generate config and register the MCP server
+4. Let you select which models to use for generation (model pinning)
+5. Assign quality tiers to selected models
+6. Generate config and register the MCP server
 
 > **Tip — local scope:** Run `npx claude-imagine@latest` from inside the project you want to install into. `npx` uses your current directory automatically — no path entry needed. This is the main advantage of `npx` over the from-source install for per-project setups.
 
@@ -189,6 +192,7 @@ Skills call these tools on the MCP server. You don't invoke them directly — Cl
 | Command | Description |
 |---------|-------------|
 | `npx claude-imagine@latest` | Run interactive setup |
+| `npx claude-imagine reconfigure` | Re-select which models to pin and reassign quality tiers |
 | `npx claude-imagine check` | Verify installation (skills, config, server) |
 | `npx claude-imagine uninstall` | Remove all installed files and MCP registration |
 | `npx claude-imagine --version` | Print version |
@@ -203,6 +207,7 @@ Config file: `~/.config/claude-imagine/config.json` (auto-generated during setup
 |---------|-----------------|
 | `server.url` | ComfyUI server address |
 | `models` | Discovered models with type, tier, and sampling params |
+| `pinnedModels` | Array of model IDs to use for generation (others are ignored) |
 | `imageTypes` | Which model each image type uses, with optional dimension overrides |
 | `output.dir` | Where generated images are saved (default: `generated`) |
 

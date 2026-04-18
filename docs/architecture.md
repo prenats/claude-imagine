@@ -12,11 +12,12 @@ src/
   negative-prompts.ts   Negative prompt assembly — universal + type-specific + style-specific
   image-types.ts        11 image types — default dimensions, style, mood, composition, lighting
   models.ts             TypeScript types — Style, Mood, Composition, Lighting, ModelDefinition
-  config.ts             Config loading — env vars > JSON file > defaults
+  config.ts             Config loading — env vars > JSON file > defaults, pinnedModels filtering
   errors.ts             Error types — ConnectionError, TimeoutError, GenerationError
   setup.ts              Detection entry point — used by install.sh for JSON output
-  setup-cli.ts          Interactive setup — scope, prerequisites, copy assets, detect, register MCP
+  setup-cli.ts          Interactive setup — scope, prerequisites, copy assets, model selection, detect, register MCP
   setup-core.ts         Pure detection — detectAndDiscover(), assignModelsByTier(), buildConfig()
+  reconfigure-cli.ts    Model reconfiguration — re-select pinned models and tiers without full reinstall
   uninstall-cli.ts      Uninstall — remove assets, deregister MCP
   check-cli.ts          Verification — check skills, commands, rules, config, server
   asset-resolver.ts     Asset paths — resolves bundled files relative to package root
@@ -42,6 +43,7 @@ src/
 |-------|--------|
 | No args or `setup` | ▶️ Interactive setup (`setup-cli.ts`) |
 | `--server` | ▶️ Start MCP server on stdio (`index.ts`) |
+| `reconfigure` | ▶️ Re-select pinned models and tiers (`reconfigure-cli.ts`) |
 | `check` | ▶️ Verify installation (`check-cli.ts`) |
 | `uninstall` | ▶️ Remove installed files (`uninstall-cli.ts`) |
 | `--version` / `-V` | ▶️ Print version from package.json |
@@ -83,6 +85,7 @@ MCP Tool (generate_image)
   ▼
 generate.ts
   │  buildPrompt() → { positive, negative, model, width, height, seed }
+  │  Filters models by pinnedModels (getActiveModels)
   │  Resolves model: explicit > quality tier > type default > first available
   ▼
 backend.generate(prompt, model, serverUrl)
@@ -156,12 +159,15 @@ Backends self-register via `registerBackend()` in the registry.
       "params": { "steps": 4, "cfg": 1.0, "sampler": "euler", "scheduler": "..." }
     }
   },
+  "pinnedModels": ["<id>", "..."],
   "imageTypes": {
     "ICON": { "model": "<model-id>" }
   },
   "output": { "dir": "generated" }
 }
 ```
+
+> When `pinnedModels` is set and non-empty, only those model IDs are used for generation. Other models remain in the `models` section (for reference and re-selection via `reconfigure`) but are excluded from tier resolution and fallback selection.
 
 > Both `server.url` and flat `serverUrl` are accepted. Both `output.dir` and flat `defaultOutputDir` are accepted. The auto-setup generates the nested format.
 

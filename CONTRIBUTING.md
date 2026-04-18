@@ -37,8 +37,9 @@ src/
   config.ts             Config loading
   errors.ts             Error types
   setup.ts              Backend detection entry point
-  setup-cli.ts          Interactive setup workflow
+  setup-cli.ts          Interactive setup workflow (model selection + tier assignment)
   setup-core.ts         Pure detection logic
+  reconfigure-cli.ts    Model reconfiguration (re-pin models + reassign tiers)
   uninstall-cli.ts      Uninstall workflow
   check-cli.ts          Installation verification
   asset-resolver.ts     Bundled asset path resolution

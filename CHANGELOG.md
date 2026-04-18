@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0] - 2026-04-13
+
+### Added
+
+- **Model pinning** (`pinnedModels`) — pin specific models for generation so non-generation models on the server (feature extractors, colorizers, relighting models, etc.) are ignored. When `pinnedModels` is set in config, only those models are used for tier resolution, image type assignment, and fallback selection.
+- **Model selection step during setup** — the interactive installer (both `npx` and `install.sh`) now asks which models to include for generation before assigning quality tiers. Unselected models are still stored in config but excluded via `pinnedModels`.
+- **`reconfigure` CLI command** — re-select which models to pin and reassign tiers without running a full reinstall. Run `npx claude-imagine reconfigure` or `claude-imagine reconfigure`.
+- **`getActiveModels()` helper** in config module — filters `CONFIG.models` by `pinnedModels` for use in prompt resolution and generation validation.
+
+### Fixed
+
+- **Wrong models used for generation** — when the ComfyUI server had non-generation models installed (DINOv2, ICLight, ddcolor, qwen, etc.), the system discovered all of them and assigned them to image types. The first model per tier was used regardless of whether it could actually generate images. `pinnedModels` prevents this.
+- **Image type assignment during setup** — tier-to-image-type mapping now only considers selected/pinned models, preventing non-generation models from being assigned to image types.
+
+### Changed
+
+- `buildConfig()` in setup-core now accepts an optional `selectedModelIds` parameter. When provided, it emits `pinnedModels` in the config and uses only selected models for tier assignment.
+- `setup.ts` (install.sh helper) now accepts `SELECTED:id1,id2,...` on stdin alongside tier assignments.
+- `prompt-builder.ts` uses `getActiveModels(CONFIG)` instead of `CONFIG.models` directly.
+- `generate.ts` validates against active (pinned) models, not all models.
+
+---
+
 ## [0.1.0] - 2026-03-06
 
 Initial release.
@@ -68,4 +91,5 @@ Initial release.
 
 ---
 
+[0.2.0]: https://github.com/prenats/claude-imagine/releases/tag/v0.2.0
 [0.1.0]: https://github.com/prenats/claude-imagine/releases/tag/v0.1.0

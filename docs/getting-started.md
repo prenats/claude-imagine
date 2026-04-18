@@ -126,6 +126,7 @@ All configuration lives in `~/.config/claude-imagine/config.json`, generated dur
     "AVATAR": { "model": "flux1_schnell" },
     "HERO": { "model": "flux1_schnell", "width": 1344, "height": 768 }
   },
+  "pinnedModels": ["sdxl_lightning_4step", "flux1_schnell"],
   "output": { "dir": "generated" }
 }
 ```
@@ -198,6 +199,28 @@ Or for higher quality with longer generation time:
 "params": { "steps": 30, "cfg": 7.5, "sampler": "dpmpp_2m", "scheduler": "karras" }
 ```
 
+#### `pinnedModels`
+
+When your ComfyUI server has models installed for multiple projects (e.g. feature extractors, relighting models, colorizers), you can pin only the text-to-image generation models for claude-imagine. Models not in the list are ignored for generation.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `pinnedModels` | `string[]` | `[]` (all models) | Array of model IDs to use. When empty, all models are active. |
+
+```json
+"pinnedModels": ["sdxl_lightning_4step", "sd_xl_base_1_0", "flux1_dev", "flux1_schnell"]
+```
+
+The interactive setup now includes a model selection step that populates this field automatically. To re-select models after initial setup, run:
+
+```bash
+npx claude-imagine reconfigure
+```
+
+This discovers all models on the server, lets you pick which ones to pin, and reassigns quality tiers — without re-installing skills or re-registering the MCP server.
+
+> **Backwards compatibility:** If `pinnedModels` is missing or empty, all models in the config are active (same behavior as v0.1.x).
+
 #### `imageTypes`
 
 Maps each image type to a model and optionally overrides default dimensions. The installer generates this automatically from your tier selections.
@@ -254,11 +277,13 @@ Checkpoint models (e.g. SDXL) bundle their own CLIP and VAE — no extra files n
 
 **UNET models (e.g. Flux) require separate CLIP and VAE files.** The installer discovers them on your server and prompts you to select the right files. You can change them later by editing `params`:
 
-| Field | Common File | Purpose |
-|-------|------------|---------|
-| `params.clip_name1` | `clip_l.safetensors` | Language model (CLIP-L) |
-| `params.clip_name2` | `t5xxl_fp16.safetensors` or `t5xxl_fp8.safetensors` | Text encoder (T5-XXL) |
-| `params.vae_name` | `ae.safetensors` | Image decoder |
+| Field | Flux 1 | Flux 2 | Purpose |
+|-------|--------|--------|---------|
+| `params.clip_name1` | `clip_l.safetensors` | `clip_l.safetensors` | Language model (CLIP-L) |
+| `params.clip_name2` | `t5xxl_fp16.safetensors` | `t5xxl_fp16.safetensors` | Text encoder (T5-XXL) |
+| `params.vae_name` | `ae.safetensors` | `flux2-vae.safetensors` | Image decoder |
+
+> **Important:** Flux 1 and Flux 2 use **different VAE files**. Using the wrong VAE causes a tensor size mismatch error (`size of tensor a (16) must match the size of tensor b (128)`). Make sure each model points to its correct VAE.
 
 ### Environment Variables
 
