@@ -4,7 +4,7 @@ import type { GenerationRequest, BuiltPrompt, ModelDefinition } from './models.j
 import { IMAGE_TYPE_DEFAULTS } from './image-types.js';
 import { buildNegativePrompt } from './negative-prompts.js';
 import { GenerationError } from './errors.js';
-import { CONFIG } from './config.js';
+import { CONFIG, getActiveModels } from './config.js';
 
 /**
  * Build a BuiltPrompt from a GenerationRequest.
@@ -49,7 +49,7 @@ export function buildPrompt(request: GenerationRequest): BuiltPrompt {
 }
 
 function resolveModelId(request: GenerationRequest, imageType: string): string {
-  const configModels = CONFIG.models;
+  const configModels = getActiveModels(CONFIG);
 
   // 1. Explicit model param — direct ID lookup
   if (request.model && request.model in configModels) {

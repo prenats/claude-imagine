@@ -2,7 +2,7 @@
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve, relative, join } from 'node:path';
-import { CONFIG, resolveModel } from './config.js';
+import { CONFIG, resolveModel, getActiveModels } from './config.js';
 import { IMAGE_TYPE_DEFAULTS } from './image-types.js';
 import { buildPrompt } from './prompt-builder.js';
 import { GenerationError } from './errors.js';
@@ -62,7 +62,8 @@ export async function generateSingle(
     );
   }
 
-  if (Object.keys(CONFIG.models).length === 0) {
+  const activeModels = getActiveModels(CONFIG);
+  if (Object.keys(activeModels).length === 0) {
     throw new GenerationError(
       'No models configured. Run ./install.sh to auto-detect your server and discover models.',
     );
@@ -90,11 +91,11 @@ export async function generateSingle(
 
   const built = buildPrompt(request);
 
-  // Resolve the model definition from config
-  const modelDef = resolveModel(built.model, CONFIG.models);
+  // Resolve the model definition from active (pinned) models
+  const modelDef = resolveModel(built.model, activeModels);
   if (!modelDef) {
     throw new GenerationError(
-      `Unknown model '${built.model}'. Available: ${Object.keys(CONFIG.models).join(', ')}`,
+      `Unknown model '${built.model}'. Available: ${Object.keys(activeModels).join(', ')}`,
     );
   }
 

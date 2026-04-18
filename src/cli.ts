@@ -33,6 +33,8 @@ if (args.includes('--server')) {
   await import('./check-cli.js');
 } else if (command === '' || command === 'setup') {
   await import('./setup-cli.js');
+} else if (command === 'reconfigure') {
+  await import('./reconfigure-cli.js');
 } else {
   console.error(`Unknown command: ${command}`);
   printHelp();
@@ -49,6 +51,7 @@ function printHelp(): void {
   Commands:
     (no args)      Interactive setup (first-time install)
     setup          Same as no args — run interactive setup
+    reconfigure    Re-select which models to use for generation
     uninstall      Remove skills, commands, rules and MCP registration
     check          Verify an existing installation
 

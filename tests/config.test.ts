@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { loadConfig, DEFAULT_SERVER_URL } from '../src/config.js';
+import { loadConfig, getActiveModels, DEFAULT_SERVER_URL } from '../src/config.js';
+import type { ImagineConfig } from '../src/config.js';
 
 function makeTmpDir(): string {
   const dir = join(tmpdir(), `claude-imagine-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -202,5 +203,94 @@ describe('JSON config file', () => {
     expect(Object.keys(cfg.models).length).toBe(0);
 
     rmSync(dir, { recursive: true });
+  });
+
+  it('reads pinnedModels from config', () => {
+    const dir = makeTmpDir();
+    const configFile = join(dir, 'config.json');
+    writeFileSync(configFile, JSON.stringify({
+      models: {
+        model_a: { filename: 'a.safetensors', type: 'checkpoint' },
+        model_b: { filename: 'b.safetensors', type: 'unet' },
+      },
+      pinnedModels: ['model_a'],
+    }));
+
+    const cfg = loadConfig({}, configFile);
+    expect(cfg.pinnedModels).toEqual(['model_a']);
+
+    rmSync(dir, { recursive: true });
+  });
+
+  it('defaults pinnedModels to empty array when not set', () => {
+    const cfg = loadConfig({}, '/nonexistent/config.json');
+    expect(cfg.pinnedModels).toEqual([]);
+  });
+
+  it('filters non-string entries from pinnedModels', () => {
+    const dir = makeTmpDir();
+    const configFile = join(dir, 'config.json');
+    writeFileSync(configFile, JSON.stringify({
+      pinnedModels: ['valid_id', 123, null, 'another_id'],
+    }));
+
+    const cfg = loadConfig({}, configFile);
+    expect(cfg.pinnedModels).toEqual(['valid_id', 'another_id']);
+
+    rmSync(dir, { recursive: true });
+  });
+});
+
+describe('getActiveModels', () => {
+  function makeConfig(overrides: Partial<ImagineConfig> = {}): ImagineConfig {
+    return {
+      backend: 'comfyui',
+      serverUrl: 'http://localhost:8188',
+      defaultOutputDir: 'generated',
+      models: {
+        gen_model: {
+          id: 'gen_model',
+          filename: 'gen.safetensors',
+          displayName: 'Gen Model',
+          type: 'checkpoint',
+          params: {},
+        },
+        utility_model: {
+          id: 'utility_model',
+          filename: 'utility.pth',
+          displayName: 'Utility Model',
+          type: 'checkpoint',
+          params: {},
+        },
+      },
+      imageTypes: {},
+      pinnedModels: [],
+      ...overrides,
+    };
+  }
+
+  it('returns all models when pinnedModels is empty', () => {
+    const cfg = makeConfig({ pinnedModels: [] });
+    const active = getActiveModels(cfg);
+    expect(Object.keys(active)).toEqual(['gen_model', 'utility_model']);
+  });
+
+  it('returns only pinned models when pinnedModels is set', () => {
+    const cfg = makeConfig({ pinnedModels: ['gen_model'] });
+    const active = getActiveModels(cfg);
+    expect(Object.keys(active)).toEqual(['gen_model']);
+    expect(active['utility_model']).toBeUndefined();
+  });
+
+  it('ignores pinned IDs that do not exist in models', () => {
+    const cfg = makeConfig({ pinnedModels: ['gen_model', 'nonexistent'] });
+    const active = getActiveModels(cfg);
+    expect(Object.keys(active)).toEqual(['gen_model']);
+  });
+
+  it('returns empty object when all pinned IDs are invalid', () => {
+    const cfg = makeConfig({ pinnedModels: ['fake1', 'fake2'] });
+    const active = getActiveModels(cfg);
+    expect(Object.keys(active)).toEqual([]);
   });
 });

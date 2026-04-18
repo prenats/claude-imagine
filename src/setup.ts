@@ -58,12 +58,18 @@ async function main(): Promise<void> {
     }
   }
 
-  // Read tier assignments from stdin
+  // Read tier assignments and selected model list from stdin
+  // Format: modelId:tier or SELECTED:modelId1,modelId2,...
   const tierMap: Record<string, QualityTier> = {};
+  let selectedIds: string[] | undefined;
   const stdinData = await readStdin();
   for (const line of stdinData.split('\n')) {
     const trimmed = line.trim();
     if (!trimmed) continue;
+    if (trimmed.startsWith('SELECTED:')) {
+      selectedIds = trimmed.slice('SELECTED:'.length).split(',').filter(Boolean);
+      continue;
+    }
     const [modelId, tier] = trimmed.split(':');
     if (modelId && ['fast', 'standard', 'high'].includes(tier)) {
       tierMap[modelId] = tier as QualityTier;
@@ -77,7 +83,7 @@ async function main(): Promise<void> {
     }
   }
 
-  const config = buildConfig(result.backend, url, result.models, tierMap);
+  const config = buildConfig(result.backend, url, result.models, tierMap, selectedIds);
   console.log(JSON.stringify(config, null, 2));
 }
 

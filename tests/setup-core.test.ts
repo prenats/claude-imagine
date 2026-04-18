@@ -108,6 +108,48 @@ describe('setup-core', () => {
       expect(modelsConfig['fast_model']['tier']).toBe('fast');
       expect(modelsConfig['slow_model']['tier']).toBe('high');
     });
+
+    it('includes pinnedModels when selectedModelIds is provided', () => {
+      const models = [makeModel('fast_model'), makeModel('slow_model'), makeModel('utility_model')];
+      const tierMap = {
+        fast_model: 'fast' as const,
+        slow_model: 'high' as const,
+        utility_model: 'standard' as const,
+      };
+      const config = buildConfig('comfyui', 'http://localhost:8188', models, tierMap, ['fast_model', 'slow_model']);
+
+      expect(config).toHaveProperty('pinnedModels');
+      expect(config['pinnedModels']).toEqual(['fast_model', 'slow_model']);
+
+      // All models should still be in the models section
+      const modelsConfig = config['models'] as Record<string, Record<string, unknown>>;
+      expect(modelsConfig['fast_model']).toBeDefined();
+      expect(modelsConfig['slow_model']).toBeDefined();
+      expect(modelsConfig['utility_model']).toBeDefined();
+    });
+
+    it('assigns image types only from selected models', () => {
+      const models = [makeModel('gen_model'), makeModel('utility_model')];
+      const tierMap = {
+        gen_model: 'fast' as const,
+        utility_model: 'standard' as const,
+      };
+      const config = buildConfig('comfyui', 'http://localhost:8188', models, tierMap, ['gen_model']);
+
+      const imageTypes = config['imageTypes'] as Record<string, { model: string }>;
+      // All image types should map to gen_model since it's the only selected model
+      for (const assignment of Object.values(imageTypes)) {
+        expect(assignment.model).toBe('gen_model');
+      }
+    });
+
+    it('omits pinnedModels when selectedModelIds is not provided', () => {
+      const models = [makeModel('model_a')];
+      const tierMap = { model_a: 'fast' as const };
+      const config = buildConfig('comfyui', 'http://localhost:8188', models, tierMap);
+
+      expect(config).not.toHaveProperty('pinnedModels');
+    });
   });
 
   describe('isSetupError', () => {

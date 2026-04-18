@@ -87,14 +87,21 @@ export function assignModelsByTier(
 }
 
 /**
- * Build the config JSON object from setup results + user tier choices.
+ * Build the config JSON object from setup results + user choices.
+ * When selectedModelIds is provided, only those models are included and
+ * pinnedModels is set so the system uses only them for generation.
  */
 export function buildConfig(
   backendName: string,
   serverUrl: string,
   models: ReadonlyArray<DiscoveredModel>,
   tierMap: Readonly<Record<string, QualityTier>>,
+  selectedModelIds?: ReadonlyArray<string>,
 ): Record<string, unknown> {
+  const selected = selectedModelIds
+    ? new Set(selectedModelIds)
+    : undefined;
+
   const modelsRecord: Record<string, unknown> = {};
   for (const m of models) {
     modelsRecord[m.id] = {
@@ -106,7 +113,14 @@ export function buildConfig(
     };
   }
 
-  const imageTypes = assignModelsByTier(tierMap);
+  // Only use selected models for tier assignment when filtering is active
+  const tierMapForAssignment = selected
+    ? Object.fromEntries(
+        Object.entries(tierMap).filter(([id]) => selected.has(id)),
+      )
+    : tierMap;
+
+  const imageTypes = assignModelsByTier(tierMapForAssignment);
 
   return {
     backend: backendName,
@@ -114,6 +128,7 @@ export function buildConfig(
     models: modelsRecord,
     imageTypes,
     output: { dir: 'generated' },
+    ...(selected ? { pinnedModels: [...selected] } : {}),
   };
 }
 

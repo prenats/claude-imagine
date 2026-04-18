@@ -1,37 +1,39 @@
 import { describe, it, expect, vi } from 'vitest';
 
 // Mock config so prompt-builder has models to work with
-vi.mock('../src/config.js', () => ({
-  CONFIG: {
+vi.mock('../src/config.js', () => {
+  const models = {
+    fast_model: {
+      id: 'fast_model',
+      filename: 'fast.safetensors',
+      displayName: 'Fast Model',
+      type: 'checkpoint',
+      tier: 'fast' as const,
+      params: { steps: 4, cfg: 1.0, sampler: 'euler', scheduler: 'sgm_uniform' },
+    },
+    mid_model: {
+      id: 'mid_model',
+      filename: 'mid.safetensors',
+      displayName: 'Mid Model',
+      type: 'unet',
+      tier: 'standard' as const,
+      params: { steps: 4, cfg: 1.0, sampler: 'euler', scheduler: 'simple' },
+    },
+    slow_model: {
+      id: 'slow_model',
+      filename: 'slow.safetensors',
+      displayName: 'Slow Model',
+      type: 'unet',
+      tier: 'high' as const,
+      params: { steps: 20, cfg: 1.0, sampler: 'euler', scheduler: 'simple' },
+    },
+  };
+
+  const config = {
     backend: 'comfyui',
     serverUrl: 'http://localhost:8188',
     defaultOutputDir: 'generated',
-    models: {
-      fast_model: {
-        id: 'fast_model',
-        filename: 'fast.safetensors',
-        displayName: 'Fast Model',
-        type: 'checkpoint',
-        tier: 'fast' as const,
-        params: { steps: 4, cfg: 1.0, sampler: 'euler', scheduler: 'sgm_uniform' },
-      },
-      mid_model: {
-        id: 'mid_model',
-        filename: 'mid.safetensors',
-        displayName: 'Mid Model',
-        type: 'unet',
-        tier: 'standard' as const,
-        params: { steps: 4, cfg: 1.0, sampler: 'euler', scheduler: 'simple' },
-      },
-      slow_model: {
-        id: 'slow_model',
-        filename: 'slow.safetensors',
-        displayName: 'Slow Model',
-        type: 'unet',
-        tier: 'high' as const,
-        params: { steps: 20, cfg: 1.0, sampler: 'euler', scheduler: 'simple' },
-      },
-    },
+    models,
     imageTypes: {
       ICON: { model: 'fast_model' },
       THUMBNAIL: { model: 'fast_model' },
@@ -45,12 +47,26 @@ vi.mock('../src/config.js', () => ({
       HERO: { model: 'slow_model' },
       FEATURED: { model: 'slow_model' },
     },
-  },
-  DEFAULT_SERVER_URL: 'http://localhost:8188',
-  DEFAULT_OUTPUT_DIR: 'generated',
-  resolveModel: (ref: string, models: Record<string, unknown>) => (models as Record<string, unknown>)[ref],
-  loadConfig: vi.fn(),
-}));
+    pinnedModels: [] as string[],
+  };
+
+  return {
+    CONFIG: config,
+    DEFAULT_SERVER_URL: 'http://localhost:8188',
+    DEFAULT_OUTPUT_DIR: 'generated',
+    resolveModel: (ref: string, m: Record<string, unknown>) => (m as Record<string, unknown>)[ref],
+    getActiveModels: (cfg: typeof config) => {
+      if (cfg.pinnedModels.length === 0) return cfg.models;
+      const pinned = new Set(cfg.pinnedModels);
+      const result: Record<string, unknown> = {};
+      for (const [id, def] of Object.entries(cfg.models)) {
+        if (pinned.has(id)) result[id] = def;
+      }
+      return result;
+    },
+    loadConfig: vi.fn(),
+  };
+});
 
 import { buildPrompt } from '../src/prompt-builder.js';
 import { IMAGE_TYPE_DEFAULTS } from '../src/image-types.js';

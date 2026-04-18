@@ -10,29 +10,31 @@ vi.mock('node:fs', async () => {
 });
 
 // Mock config to have models so generation works
-vi.mock('../src/config.js', () => ({
-  CONFIG: {
+vi.mock('../src/config.js', () => {
+  const models = {
+    test_checkpoint: {
+      id: 'test_checkpoint',
+      filename: 'test_checkpoint.safetensors',
+      displayName: 'Test Checkpoint',
+      type: 'checkpoint',
+      tier: 'fast' as const,
+      params: { steps: 4, cfg: 1.0, sampler: 'euler', scheduler: 'sgm_uniform' },
+    },
+    test_unet: {
+      id: 'test_unet',
+      filename: 'test_unet.safetensors',
+      displayName: 'Test UNet',
+      type: 'unet',
+      tier: 'high' as const,
+      params: { steps: 20, cfg: 1.0, sampler: 'euler', scheduler: 'simple' },
+    },
+  };
+
+  const config = {
     backend: 'comfyui',
     serverUrl: 'http://localhost:8188',
     defaultOutputDir: 'generated',
-    models: {
-      test_checkpoint: {
-        id: 'test_checkpoint',
-        filename: 'test_checkpoint.safetensors',
-        displayName: 'Test Checkpoint',
-        type: 'checkpoint',
-        tier: 'fast' as const,
-        params: { steps: 4, cfg: 1.0, sampler: 'euler', scheduler: 'sgm_uniform' },
-      },
-      test_unet: {
-        id: 'test_unet',
-        filename: 'test_unet.safetensors',
-        displayName: 'Test UNet',
-        type: 'unet',
-        tier: 'high' as const,
-        params: { steps: 20, cfg: 1.0, sampler: 'euler', scheduler: 'simple' },
-      },
-    },
+    models,
     imageTypes: {
       ICON: { model: 'test_checkpoint' },
       THUMBNAIL: { model: 'test_checkpoint' },
@@ -46,12 +48,26 @@ vi.mock('../src/config.js', () => ({
       HERO: { model: 'test_unet' },
       FEATURED: { model: 'test_unet' },
     },
-  },
-  DEFAULT_SERVER_URL: 'http://localhost:8188',
-  DEFAULT_OUTPUT_DIR: 'generated',
-  resolveModel: (ref: string, models: Record<string, unknown>) => (models as Record<string, unknown>)[ref],
-  loadConfig: vi.fn(),
-}));
+    pinnedModels: [] as string[],
+  };
+
+  return {
+    CONFIG: config,
+    DEFAULT_SERVER_URL: 'http://localhost:8188',
+    DEFAULT_OUTPUT_DIR: 'generated',
+    resolveModel: (ref: string, m: Record<string, unknown>) => (m as Record<string, unknown>)[ref],
+    getActiveModels: (cfg: typeof config) => {
+      if (cfg.pinnedModels.length === 0) return cfg.models;
+      const pinned = new Set(cfg.pinnedModels);
+      const result: Record<string, unknown> = {};
+      for (const [id, def] of Object.entries(cfg.models)) {
+        if (pinned.has(id)) result[id] = def;
+      }
+      return result;
+    },
+    loadConfig: vi.fn(),
+  };
+});
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';

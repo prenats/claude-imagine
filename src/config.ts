@@ -29,6 +29,8 @@ export interface ImagineConfig {
     readonly height?: number;
   }>>;
   readonly defaultOutputDir: string;
+  /** When set, only these model IDs are used for generation. Others are ignored. */
+  readonly pinnedModels: ReadonlyArray<string>;
 }
 
 export function loadConfig(
@@ -42,6 +44,7 @@ export function loadConfig(
   let defaultOutputDir = DEFAULT_OUTPUT_DIR;
   let models: Record<string, ModelDefinition> = {};
   let imageTypes: Record<string, { model: string; width?: number; height?: number }> = {};
+  let pinnedModels: string[] = [];
 
   const resolvedConfigPath =
     configPath ??
@@ -114,6 +117,11 @@ export function loadConfig(
           }
         }
       }
+      // Pinned models — only these are used for generation when set
+      const pinnedSection = data['pinnedModels'];
+      if (Array.isArray(pinnedSection)) {
+        pinnedModels = pinnedSection.filter((v): v is string => typeof v === 'string');
+      }
     } catch (e) {
       process.stderr.write(`claude-imagine: config parse error: ${e}\n`);
     }
@@ -130,7 +138,7 @@ export function loadConfig(
     defaultOutputDir = resolvedEnv['IMAGINE_OUTPUT_DIR'];
   }
 
-  return { backend, serverUrl, models, imageTypes, defaultOutputDir };
+  return { backend, serverUrl, models, imageTypes, defaultOutputDir, pinnedModels };
 }
 
 /** Resolve a model ID to a ModelDefinition from the config. */
@@ -139,6 +147,24 @@ export function resolveModel(
   configModels: Readonly<Record<string, ModelDefinition>>,
 ): ModelDefinition | undefined {
   return configModels[modelRef];
+}
+
+/**
+ * Return only the models that are active for generation.
+ * When pinnedModels is set and non-empty, only those models are returned.
+ * Otherwise, all models are returned (backwards-compatible).
+ */
+export function getActiveModels(config: ImagineConfig): Readonly<Record<string, ModelDefinition>> {
+  if (config.pinnedModels.length === 0) return config.models;
+
+  const pinned = new Set(config.pinnedModels);
+  const result: Record<string, ModelDefinition> = {};
+  for (const [id, def] of Object.entries(config.models)) {
+    if (pinned.has(id)) {
+      result[id] = def;
+    }
+  }
+  return result;
 }
 
 export const CONFIG = loadConfig();

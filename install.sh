@@ -578,6 +578,46 @@ install_config() {
                 "${model_types[$i]}" "${model_names[$i]}"
         done
 
+        # --- Model Selection (pin only generation models) ---
+        echo ""
+        header "Model Selection"
+        echo ""
+        detail "Select which models to use for image generation."
+        detail "Models not selected will be ignored by claude-imagine."
+        echo ""
+
+        local selected_ids=()
+        for i in "${!model_ids[@]}"; do
+            local m_id="${model_ids[$i]}"
+            local m_name="${model_names[$i]}"
+            local m_type="${model_types[$i]}"
+            local type_color="$RESET"
+            case "$m_type" in
+                checkpoint) type_color="$YELLOW" ;;
+                unet)       type_color="$BLUE" ;;
+            esac
+
+            local answer=""
+            printf "  ${type_color}%-10s${RESET} ${BOLD}%s${RESET} — use for generation? [Y/n]: " "$m_type" "$m_name"
+            read -r answer
+            answer="${answer:-Y}"
+            case "$answer" in
+                [Yy]*)
+                    selected_ids+=("$m_id")
+                    step "${m_name} — included"
+                    ;;
+                *)
+                    detail "${m_name} — skipped"
+                    ;;
+            esac
+        done
+
+        if [ ${#selected_ids[@]} -eq 0 ]; then
+            warn "No models selected! Including all models as fallback."
+            selected_ids=("${model_ids[@]}")
+        fi
+
+        # --- Quality Tier Assignment (only for selected models) ---
         echo ""
         header "Quality Tier Assignment"
         echo ""
@@ -588,10 +628,17 @@ install_config() {
         echo ""
 
         local tier_assignments=""
+        local selected_set=" ${selected_ids[*]} "
         for i in "${!model_ids[@]}"; do
             local m_id="${model_ids[$i]}"
             local m_name="${model_names[$i]}"
             local m_suggested="${model_suggested_tiers[$i]}"
+
+            # Only assign tiers for selected models
+            if [[ "$selected_set" != *" $m_id "* ]]; then
+                tier_assignments="${tier_assignments}${m_id}:${m_suggested}\n"
+                continue
+            fi
 
             local tier=""
             while true; do
@@ -608,8 +655,12 @@ install_config() {
             tier_assignments="${tier_assignments}${m_id}:${tier}\n"
         done
 
-        # Phase 2: re-run setup.js with tier assignments piped to stdin
-        setup_result="$(printf '%b' "$tier_assignments" | node "${REPO_DIR}/dist/setup.js" "${server_url}" 2>/dev/null || true)"
+        # Build SELECTED line for stdin
+        local selected_line=""
+        selected_line="SELECTED:$(IFS=,; echo "${selected_ids[*]}")"
+
+        # Phase 2: re-run setup.js with tier assignments + selected models piped to stdin
+        setup_result="$(printf '%b\n%s' "$tier_assignments" "$selected_line" | node "${REPO_DIR}/dist/setup.js" "${server_url}" 2>/dev/null || true)"
 
         if [ -z "$setup_result" ]; then
             warn "Failed to build config with tier assignments"

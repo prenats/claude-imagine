@@ -67,12 +67,16 @@ async function main(): Promise<void> {
         console.log(`    ${typeColor}${m.type.padEnd(13)}${colors.reset} ${name}`);
       }
 
-      // --- Quality tier assignment ---
-      const tierMap = await assignTiers(result.models);
+      // --- Model selection (pin only generation models) ---
+      const selectedIds = await selectModels(result.models);
+
+      // --- Quality tier assignment (only for selected models) ---
+      const selectedModels = result.models.filter(m => selectedIds.includes(m.id));
+      const tierMap = await assignTiers(selectedModels);
 
       // --- CLIP/VAE configuration for UNET models ---
-      const config = buildConfig(result.backend, serverUrl, result.models, tierMap);
-      const unetModels = result.models.filter(m => m.type === 'unet');
+      const config = buildConfig(result.backend, serverUrl, result.models, tierMap, selectedIds);
+      const unetModels = selectedModels.filter(m => m.type === 'unet');
       if (unetModels.length > 0 && (result.supportFiles.clipFiles.length > 0 || result.supportFiles.vaeFiles.length > 0)) {
         await configureUnetSupportFiles(unetModels, result.supportFiles, config);
       }
@@ -278,6 +282,41 @@ function registerMcp(scope: 'global' | 'local', projectDir: string): void {
   } catch {
     warn(`Could not register MCP server (try: claude mcp add -s ${mcpScope} claude-imagine -- npx -y claude-imagine --server)`);
   }
+}
+
+async function selectModels(
+  models: ReadonlyArray<import('./backends/types.js').DiscoveredModel>,
+): Promise<string[]> {
+  console.log('');
+  header('Model Selection');
+  console.log('');
+  detail('Select which models to use for image generation.');
+  detail('Models not selected will still be available on the server but ignored by claude-imagine.');
+  console.log('');
+
+  const selected: string[] = [];
+  for (const m of models) {
+    const typeColor = m.type === 'checkpoint' ? colors.yellow
+      : m.type === 'unet' ? colors.blue : colors.reset;
+    const label = `${typeColor}${m.type.padEnd(10)}${colors.reset} ${colors.bold}${m.displayName}${colors.reset}`;
+    const answer = await promptChoice(
+      `  ${label} — use for generation? [Y/n]: `,
+      ['y', 'Y', 'n', 'N', ''],
+    );
+    if (answer === '' || answer.toLowerCase() === 'y') {
+      selected.push(m.id);
+      step(`${m.displayName} — included`);
+    } else {
+      detail(`${m.displayName} — skipped`);
+    }
+  }
+
+  if (selected.length === 0) {
+    warn('No models selected! Including all models as fallback.');
+    return models.map(m => m.id);
+  }
+
+  return selected;
 }
 
 async function assignTiers(
