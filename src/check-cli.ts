@@ -12,6 +12,11 @@ import {
   colors, step, warn, fail, header, detail, printLine, printBanner, getVersion,
 } from './cli-ui.js';
 import { ASSET_FILES } from './asset-resolver.js';
+import {
+  hasCursorMcpRegistration,
+  hasCursorRule,
+} from './cursor-integration.js';
+import { verifyServerConnection } from './server-check.js';
 
 const version = getVersion();
 
@@ -42,9 +47,33 @@ async function main(): Promise<void> {
     errors += result.errors;
   }
 
-  if (!hasGlobal && !hasLocal) {
-    fail('No installation found (global or local)');
+  const hasClaudeInstall = hasGlobal || hasLocal;
+  const globalCursorMcp = hasCursorMcpRegistration('global', homedir());
+  const localCursorMcp = hasCursorMcpRegistration('local', process.cwd());
+  const hasCursorInstall = globalCursorMcp || localCursorMcp;
+  const globalCursorRule = hasCursorRule('global', homedir());
+  const localCursorRule = hasCursorRule('local', process.cwd());
+
+  if (!hasClaudeInstall && !hasCursorInstall) {
+    fail('No installation found — run setup and choose Claude Code, Cursor, or Both');
     errors++;
+  }
+
+  if (globalCursorMcp || localCursorMcp) {
+    header('Cursor');
+  }
+  if (globalCursorMcp) {
+    step('Cursor MCP registered (global ~/.cursor/mcp.json)');
+  }
+  if (localCursorMcp) {
+    step(`Cursor MCP registered (local ${join(process.cwd(), '.cursor/mcp.json')})`);
+  }
+  if (globalCursorRule || localCursorRule) {
+    step('Cursor rule: image-generation.mdc');
+  }
+  if (!globalCursorMcp && !localCursorMcp && !hasClaudeInstall) {
+    warn('Cursor MCP not registered — run setup and choose Cursor or Both');
+    warnings++;
   }
 
   // Config
@@ -70,15 +99,24 @@ async function main(): Promise<void> {
   // Server connectivity
   header('Server');
   let serverUrl = 'http://localhost:8188';
+  let serverToken: string | undefined;
+  let tlsInsecure = false;
   if (existsSync(configPath)) {
     try {
       const data = JSON.parse(readFileSync(configPath, 'utf-8'));
       serverUrl = data?.server?.url ?? data?.serverUrl ?? serverUrl;
+      serverToken = data?.server?.token ?? process.env['IMAGINE_SERVER_TOKEN'];
+      tlsInsecure = data?.server?.tlsInsecure === true
+        || process.env['IMAGINE_TLS_INSECURE'] === '1'
+        || process.env['IMAGINE_TLS_INSECURE'] === 'true';
     } catch { /* use default */ }
   }
 
   process.stdout.write(`  Connecting to ${colors.cyan}${serverUrl}${colors.reset} ... `);
-  const reachable = await checkServerReachable(serverUrl);
+  const reachable = await verifyServerConnection(serverUrl, {
+    token: serverToken,
+    tlsInsecure,
+  });
   if (reachable) {
     console.log(`${colors.green}OK${colors.reset}`);
   } else {
@@ -137,18 +175,6 @@ function checkAssets(claudeDir: string): { errors: number } {
   }
 
   return { errors };
-}
-
-async function checkServerReachable(url: string): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    await fetch(url, { signal: controller.signal });
-    clearTimeout(timeout);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 main().catch((e) => {

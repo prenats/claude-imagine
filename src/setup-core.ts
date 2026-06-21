@@ -97,6 +97,7 @@ export function buildConfig(
   models: ReadonlyArray<DiscoveredModel>,
   tierMap: Readonly<Record<string, QualityTier>>,
   selectedModelIds?: ReadonlyArray<string>,
+  serverOptions?: { token?: string; tlsInsecure?: boolean },
 ): Record<string, unknown> {
   const selected = selectedModelIds
     ? new Set(selectedModelIds)
@@ -124,7 +125,11 @@ export function buildConfig(
 
   return {
     backend: backendName,
-    server: { url: serverUrl },
+    server: {
+      url: serverUrl,
+      ...(serverOptions?.token ? { token: serverOptions.token } : {}),
+      ...(serverOptions?.tlsInsecure ? { tlsInsecure: true } : {}),
+    },
     models: modelsRecord,
     imageTypes,
     output: { dir: 'generated' },

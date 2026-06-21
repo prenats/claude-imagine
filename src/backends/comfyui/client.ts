@@ -1,6 +1,7 @@
 /** HTTP client for communicating with a ComfyUI server. */
 
 import { ConnectionError, GenerationError, TimeoutError } from '../../errors.js';
+import { buildAuthHeaders } from '../../server-transport.js';
 
 export const POLL_INTERVAL = 1500; // ms
 export const TIMEOUT = 180_000;    // ms
@@ -9,7 +10,8 @@ export async function httpRequest(url: string, options?: RequestInit): Promise<R
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30_000);
   try {
-    const response = await fetch(url, { ...options, signal: controller.signal });
+    const headers = buildAuthHeaders(options?.headers);
+    const response = await fetch(url, { ...options, headers, signal: controller.signal });
     return response;
   } catch (e) {
     if (e instanceof Error && e.name === 'AbortError') {

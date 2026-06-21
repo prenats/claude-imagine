@@ -5,7 +5,7 @@
  * the backend and discovers available models.
  *
  * Priority (highest wins):
- *   1. Environment variables (IMAGINE_SERVER_URL, IMAGINE_BACKEND, IMAGINE_OUTPUT_DIR)
+ *   1. Environment variables (IMAGINE_SERVER_URL, IMAGINE_SERVER_TOKEN, IMAGINE_TLS_INSECURE, …)
  *   2. JSON config file (~/.config/claude-imagine/config.json)
  *   3. Hardcoded defaults (empty models/imageTypes — requires running install)
  */
@@ -22,6 +22,10 @@ export const DEFAULT_OUTPUT_DIR = 'generated';
 export interface ImagineConfig {
   readonly backend: string;
   readonly serverUrl: string;
+  /** Bearer token for authenticated gateways (e.g. NervSys bared nginx). */
+  readonly serverToken?: string;
+  /** Accept self-signed or internal CA certificates (lab use). */
+  readonly tlsInsecure: boolean;
   readonly models: Readonly<Record<string, ModelDefinition>>;
   readonly imageTypes: Readonly<Record<string, {
     readonly model: string;
@@ -41,6 +45,8 @@ export function loadConfig(
 
   let backend = 'comfyui';
   let serverUrl = DEFAULT_SERVER_URL;
+  let serverToken: string | undefined;
+  let tlsInsecure = false;
   let defaultOutputDir = DEFAULT_OUTPUT_DIR;
   let models: Record<string, ModelDefinition> = {};
   let imageTypes: Record<string, { model: string; width?: number; height?: number }> = {};
@@ -68,6 +74,12 @@ export function loadConfig(
         const serverSection = (data['server'] ?? {}) as Record<string, unknown>;
         if (typeof serverSection['url'] === 'string') {
           serverUrl = serverSection['url'];
+        }
+        if (typeof serverSection['token'] === 'string' && serverSection['token']) {
+          serverToken = serverSection['token'];
+        }
+        if (serverSection['tlsInsecure'] === true) {
+          tlsInsecure = true;
         }
       }
 
@@ -131,6 +143,13 @@ export function loadConfig(
   if (resolvedEnv['IMAGINE_SERVER_URL']) {
     serverUrl = resolvedEnv['IMAGINE_SERVER_URL'];
   }
+  if (resolvedEnv['IMAGINE_SERVER_TOKEN']) {
+    serverToken = resolvedEnv['IMAGINE_SERVER_TOKEN'];
+  }
+  if (resolvedEnv['IMAGINE_TLS_INSECURE'] === '1'
+    || resolvedEnv['IMAGINE_TLS_INSECURE'] === 'true') {
+    tlsInsecure = true;
+  }
   if (resolvedEnv['IMAGINE_BACKEND']) {
     backend = resolvedEnv['IMAGINE_BACKEND'];
   }
@@ -138,7 +157,16 @@ export function loadConfig(
     defaultOutputDir = resolvedEnv['IMAGINE_OUTPUT_DIR'];
   }
 
-  return { backend, serverUrl, models, imageTypes, defaultOutputDir, pinnedModels };
+  return {
+    backend,
+    serverUrl,
+    serverToken,
+    tlsInsecure,
+    models,
+    imageTypes,
+    defaultOutputDir,
+    pinnedModels,
+  };
 }
 
 /** Resolve a model ID to a ModelDefinition from the config. */

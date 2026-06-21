@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - 2026-06-21
+
+### Added
+
+- **Cursor / Composer support** — interactive setup can target Claude Code, Cursor, or both. Installs `.cursor/mcp.json` and `image-generation.mdc` agent rule.
+- **Bearer token auth** — `IMAGINE_SERVER_TOKEN` and `server.token` in config for authenticated gateways (e.g. NervSys bared nginx).
+- **TLS insecure mode** — `IMAGINE_TLS_INSECURE` and `server.tlsInsecure` for internal/self-signed PKI certificates.
+- **`verifyServerConnection`** — shared health check with auth and TLS options used by setup and `check`.
+- **`config.bared.example.json`** — example config for NervSys bared ComfyUI gateway.
+- **Docs** — [Cursor setup](docs/cursor.md) and [NervSys firewall](docs/nervsys-firewall.md).
+
+### Changed
+
+- Setup CLI prompts for IDE target (Claude Code / Cursor / Both) before scope selection.
+- `check` reports Cursor MCP registration and rule installation status.
+- ComfyUI client uses shared server transport for authenticated requests.
+
+---
+
 ## [0.2.0] - 2026-04-13
 
 ### Added
@@ -91,5 +110,6 @@ Initial release.
 
 ---
 
+[0.3.0]: https://github.com/prenats/claude-imagine/releases/tag/v0.3.0
 [0.2.0]: https://github.com/prenats/claude-imagine/releases/tag/v0.2.0
 [0.1.0]: https://github.com/prenats/claude-imagine/releases/tag/v0.1.0

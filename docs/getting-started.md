@@ -4,7 +4,7 @@
 
 | Requirement | Details |
 |-------------|---------|
-| [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | Installed and working |
+| [Claude Code](https://docs.anthropic.com/en/docs/claude-code) **or** [Cursor](https://cursor.com) with Composer | At least one IDE |
 | [Node.js](https://nodejs.org/) | v20 or later |
 | [ComfyUI](https://github.com/comfyanonymous/ComfyUI) | Running with GPU access |
 
@@ -34,7 +34,9 @@ Any NVIDIA card with **8GB+ VRAM** works for most models. Larger models (e.g. Fl
 npx claude-imagine@latest
 ```
 
-The interactive installer walks you through scope selection, server detection, and model discovery.
+The interactive installer walks you through IDE target, scope selection, server detection, and model discovery.
+
+> **Cursor users:** See [Cursor setup](cursor.md) for Composer-specific steps.
 
 > **Tip — local scope:** When you choose **Local** during setup, `npx` automatically uses your current working directory as the target project — no path entry needed. This is the main reason `npx` is the preferred install method for per-project installs.
 
@@ -56,13 +58,15 @@ npm run build
 
 | Component | Installed To | Purpose |
 |-----------|-------------|---------|
-| 🎨 image-generate skill | `~/.claude/skills/claude-imagine/image-generate/SKILL.md` | Prompt engineering + image generation workflow |
-| 💡 image-suggest skill | `~/.claude/skills/claude-imagine/image-suggest/SKILL.md` | Project image planning + batch generation |
-| ⌨️ image-generate command | `~/.claude/commands/claude-imagine/image-generate.md` | `/claude-imagine:image-generate` slash command |
-| ⌨️ image-suggest command | `~/.claude/commands/claude-imagine/image-suggest.md` | `/claude-imagine:image-suggest` slash command |
-| 📏 image-generation rule | `~/.claude/rules/image/image-generation.md` | Enforces prompt engineering, bans placeholders |
+| 🎨 image-generate skill | `~/.claude/skills/...` or `.claude/skills/...` | Prompt engineering + image generation workflow |
+| 💡 image-suggest skill | `~/.claude/skills/...` or `.claude/skills/...` | Project image planning + batch generation |
+| ⌨️ image-generate command | `~/.claude/commands/...` or `.claude/commands/...` | `/claude-imagine:image-generate` slash command |
+| ⌨️ image-suggest command | `~/.claude/commands/...` or `.claude/commands/...` | `/claude-imagine:image-suggest` slash command |
+| 📏 image-generation rule | `~/.claude/rules/...` or `.claude/rules/...` | Enforces prompt engineering, bans placeholders |
+| 🔌 Cursor MCP | `~/.cursor/mcp.json` or `.cursor/mcp.json` | Registers claude-imagine for Composer (when Cursor is selected) |
+| 📏 Cursor rule | `~/.cursor/rules/image-generation.mdc` | Agent rule for image generation in Composer |
 | ⚙️ Config file | `~/.config/claude-imagine/config.json` | Server URL, discovered models, type assignments |
-| 🔌 MCP registration | Automatic | Registers via `claude mcp add` |
+| 🔌 MCP registration | Automatic | Registers via `claude mcp add` (Claude Code) or `.cursor/mcp.json` (Cursor) |
 
 The scope (global `~/.claude/` or local `.claude/`) is chosen during setup.
 

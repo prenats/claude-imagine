@@ -17,32 +17,52 @@ import { ASSET_FILES, resolveAsset } from './asset-resolver.js';
 import { detectAndDiscover, isSetupError, buildConfig } from './setup-core.js';
 import { suggestTier } from './backends/comfyui/defaults.js';
 import type { QualityTier } from './setup-core.js';
+import {
+  DEFAULT_BARED_COMFY_URL,
+  installCursorIntegration,
+  type CursorScope,
+} from './cursor-integration.js';
+import { verifyServerConnection, applyServerConnectionOptions } from './server-check.js';
 
 const version = getVersion();
 
+type IdeTarget = 'claude' | 'cursor' | 'both';
+
 async function main(): Promise<void> {
   printBanner(version);
+
+  const ide = await chooseIdeTarget();
 
   // --- Scope selection ---
   const { scope, claudeDir, projectDir } = await chooseScope('Install');
 
   // --- Prerequisites ---
   header('Prerequisites');
-  checkPrereqs(claudeDir, scope);
+  if (ide === 'claude' || ide === 'both') {
+    checkPrereqs(claudeDir, scope);
+  }
 
-  // --- Copy assets ---
-  header('Claude Code Integration');
-  copyAssets(claudeDir);
+  // --- Copy Claude Code assets ---
+  if (ide === 'claude' || ide === 'both') {
+    header('Claude Code Integration');
+    copyAssets(claudeDir);
+  }
 
   // --- Server config ---
-  const serverUrl = await configureServer();
+  const server = await configureServer();
 
   // --- Backend detection ---
   header('Backend Detection');
   const configDir = join(homedir(), '.config', 'claude-imagine');
   mkdirSync(configDir, { recursive: true });
+  const configPath = join(configDir, 'config.json');
 
-  const result = await detectAndDiscover(serverUrl);
+  applyServerConnectionOptions({
+    token: server.token,
+    tlsInsecure: server.tlsInsecure,
+  });
+
+  const result = await detectAndDiscover(server.url);
 
   if (isSetupError(result)) {
     warn(`Auto-detection failed: ${result.error}`);
@@ -75,25 +95,44 @@ async function main(): Promise<void> {
       const tierMap = await assignTiers(selectedModels);
 
       // --- CLIP/VAE configuration for UNET models ---
-      const config = buildConfig(result.backend, serverUrl, result.models, tierMap, selectedIds);
+      const config = buildConfig(
+        result.backend,
+        server.url,
+        result.models,
+        tierMap,
+        selectedIds,
+        { token: server.token, tlsInsecure: server.tlsInsecure },
+      );
       const unetModels = selectedModels.filter(m => m.type === 'unet');
       if (unetModels.length > 0 && (result.supportFiles.clipFiles.length > 0 || result.supportFiles.vaeFiles.length > 0)) {
         await configureUnetSupportFiles(unetModels, result.supportFiles, config);
       }
 
       console.log('');
-      writeFileSync(
-        join(configDir, 'config.json'),
-        JSON.stringify(config, null, 2) + '\n',
-      );
-      step(`Config saved (${configDir}/config.json)`);
+      writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
+      step(`Config saved (${configPath})`);
     } else {
       warn('No models found on server');
     }
   }
 
-  // --- Register MCP server ---
-  registerMcp(scope, projectDir);
+  // --- Register MCP servers ---
+  if (ide === 'claude' || ide === 'both') {
+    registerClaudeMcp(scope, projectDir);
+  }
+  if (ide === 'cursor' || ide === 'both') {
+    header('Cursor Integration');
+    const cursorScope = scope as CursorScope;
+    const cursor = installCursorIntegration(cursorScope, projectDir || process.cwd(), {
+      serverUrl: server.url,
+      serverToken: server.token,
+      tlsInsecure: server.tlsInsecure,
+      configPath,
+    });
+    step(`MCP config: ${cursor.mcpPath}`);
+    step(`Rule: ${cursor.rulePath}`);
+    detail('Restart Cursor and enable claude-imagine in MCP tools');
+  }
 
   // --- Done ---
   console.log('');
@@ -103,13 +142,33 @@ async function main(): Promise<void> {
   console.log('');
   console.log(`  ${colors.bold}Next steps:${colors.reset}`);
   console.log('');
-  console.log('    Restart Claude Code, then generate images:');
-  console.log(`       ${colors.cyan}/claude-imagine:image-generate${colors.reset}`);
-  console.log(`       ${colors.cyan}/claude-imagine:image-suggest${colors.reset}`);
-  console.log('');
-  console.log(`  ${colors.dim}Config: ${configDir}/config.json${colors.reset}`);
+  if (ide === 'claude' || ide === 'both') {
+    console.log('    Restart Claude Code, then generate images:');
+    console.log(`       ${colors.cyan}/claude-imagine:image-generate${colors.reset}`);
+    console.log(`       ${colors.cyan}/claude-imagine:image-suggest${colors.reset}`);
+    console.log('');
+  }
+  if (ide === 'cursor' || ide === 'both') {
+    console.log('    Restart Cursor, enable claude-imagine MCP, then ask Composer to generate images.');
+    console.log('');
+  }
+  console.log(`  ${colors.dim}Config: ${configPath}${colors.reset}`);
   console.log(`  ${colors.dim}Edit config to customize model assignments or add models${colors.reset}`);
   console.log('');
+}
+
+async function chooseIdeTarget(): Promise<IdeTarget> {
+  header('IDE Target');
+  console.log('');
+  console.log(`    ${colors.cyan}1${colors.reset}  Claude Code  ${colors.dim}(~/.claude/ + claude mcp add)${colors.reset}`);
+  console.log(`    ${colors.cyan}2${colors.reset}  Cursor         ${colors.dim}(.cursor/mcp.json + rules)${colors.reset}`);
+  console.log(`    ${colors.cyan}3${colors.reset}  Both`);
+  console.log('');
+
+  const choice = await promptChoice('Choose [1/2/3]: ', ['1', '2', '3']);
+  if (choice === '2') return 'cursor';
+  if (choice === '3') return 'both';
+  return 'claude';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -204,16 +263,24 @@ function copyAssets(claudeDir: string): void {
   step('Rules installed');
 }
 
-async function configureServer(): Promise<string> {
+async function configureServer(): Promise<{
+  url: string;
+  token?: string;
+  tlsInsecure: boolean;
+}> {
   const configDir = join(homedir(), '.config', 'claude-imagine');
   const configPath = join(configDir, 'config.json');
-  const defaultUrl = 'http://localhost:8188';
+  const defaultUrl = DEFAULT_BARED_COMFY_URL;
 
   let currentUrl = '';
+  let currentToken = '';
+  let currentTlsInsecure = false;
   if (existsSync(configPath)) {
     try {
       const data = JSON.parse(readFileSync(configPath, 'utf-8'));
       currentUrl = data?.server?.url ?? data?.serverUrl ?? '';
+      currentToken = data?.server?.token ?? '';
+      currentTlsInsecure = data?.server?.tlsInsecure === true;
     } catch { /* ignore */ }
   }
 
@@ -223,6 +290,11 @@ async function configureServer(): Promise<string> {
   console.log('');
 
   let serverUrl = '';
+  let serverToken = process.env['IMAGINE_SERVER_TOKEN'] ?? currentToken;
+  let tlsInsecure = currentTlsInsecure
+    || process.env['IMAGINE_TLS_INSECURE'] === '1'
+    || process.env['IMAGINE_TLS_INSECURE'] === 'true';
+
   while (true) {
     serverUrl = await prompt('Server URL', promptDefault);
 
@@ -230,9 +302,26 @@ async function configureServer(): Promise<string> {
       serverUrl = 'http://' + serverUrl;
     }
 
+    if (serverUrl.startsWith('https://')) {
+      const tlsAnswer = await prompt(
+        'Trust internal/self-signed TLS certificate? [Y/n]',
+        tlsInsecure ? 'Y' : 'N',
+      );
+      tlsInsecure = tlsAnswer === '' || tlsAnswer.toLowerCase().startsWith('y');
+
+      const tokenAnswer = await prompt(
+        'Bearer token (leave empty if not required)',
+        serverToken,
+      );
+      serverToken = tokenAnswer.trim();
+    }
+
     process.stdout.write(`  Connecting to ${colors.cyan}${serverUrl}${colors.reset} ... `);
 
-    const reachable = await checkServerReachable(serverUrl);
+    const reachable = await verifyServerConnection(serverUrl, {
+      token: serverToken || undefined,
+      tlsInsecure,
+    });
     if (reachable) {
       console.log(`${colors.green}OK${colors.reset}`);
       break;
@@ -244,22 +333,14 @@ async function configureServer(): Promise<string> {
     console.log('');
   }
 
-  return serverUrl;
+  return {
+    url: serverUrl,
+    token: serverToken || undefined,
+    tlsInsecure,
+  };
 }
 
-async function checkServerReachable(url: string): Promise<boolean> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    await fetch(url, { signal: controller.signal });
-    clearTimeout(timeout);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function registerMcp(scope: 'global' | 'local', projectDir: string): void {
+function registerClaudeMcp(scope: 'global' | 'local', projectDir: string): void {
   const mcpScope = scope === 'global' ? 'user' : 'project';
 
   try {

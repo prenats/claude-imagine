@@ -1,0 +1,35 @@
+---
+description: Generate real images via claude-imagine MCP — engineer prompts, no placeholders
+alwaysApply: true
+---
+
+# Image Generation (claude-imagine MCP)
+
+When the user needs an image (hero, icon, product photo, avatar, banner, etc.):
+
+1. **Engineer a prompt** (150–250 words): scene, lighting, atmosphere, camera/lens, color grading, materials, style markers, quality anchors. Comma-separated phrases, not full sentences. No negative terms in the main prompt.
+2. **Call the MCP tool** `generate_image` on server `claude-imagine` with the crafted prompt as `description`.
+3. **Pick the right type**: ICON, THUMBNAIL, BACKGROUND, TEXTURE (fast); AVATAR, CONTENT, BANNER, PRODUCT (standard); LOGO, HERO, FEATURED (high).
+4. **Save** to a sensible `output_path` in the project (default: `generated/<slug>.png`).
+
+Use `list_capabilities` to see configured models and image types.
+Use `check_server` before batch generation.
+Use `batch_generate` when multiple images are needed at once.
+
+## Never
+
+- Placeholder services (picsum, placehold.it, via.placeholder, lorempixel)
+- Empty `src=""` on `<img>` tags
+- Skip prompt engineering and pass a one-line description to `generate_image`
+
+## Inline generation while coding
+
+When building HTML/UI and an `<img>` is needed, generate in context using the surrounding theme, palette, and copy — do not defer to stock placeholders.
+
+## Reference
+
+| Tier | Types |
+|------|-------|
+| Fast | ICON, THUMBNAIL, BACKGROUND, TEXTURE |
+| Standard | AVATAR, CONTENT, BANNER, PRODUCT |
+| High | LOGO, HERO, FEATURED |

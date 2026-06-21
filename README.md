@@ -1,8 +1,8 @@
 <div align="center">
   <h1>Claude-Imagine</h1>
-  <p><strong>Context-aware image generation for Claude Code, powered by your local GPU</strong></p>
+  <p><strong>Context-aware image generation for Claude Code and Cursor, powered by your local GPU</strong></p>
 
-  <p>An MCP server that lets Claude Code generate real images while it works. No external APIs, no stock photos. Just your GPU and whatever diffusion models you have installed.</p>
+  <p>An MCP server that lets Claude Code or Cursor Composer generate real images while you work. No external APIs, no stock photos. Just your GPU and whatever diffusion models you have installed.</p>
 
   <br/>
 
@@ -46,6 +46,7 @@ When you're not coding, there are direct commands too. `/claude-imagine:image-ge
 - **Smart Negative Prompts** — auto-generated per type and style (SDXL only)
 - **Pluggable Backends** — ComfyUI today, extensible architecture for future backends
 - **Flexible Scope** — install globally or per-project
+- **Cursor Support** — MCP registration and agent rules for Composer
 
 ---
 
@@ -53,12 +54,12 @@ When you're not coding, there are direct commands too. `/claude-imagine:image-ge
 
 ### Requirements
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) **or** [Cursor](https://cursor.com) with Composer
 - [Node.js](https://nodejs.org/) 20+
 - [ComfyUI](https://github.com/comfyanonymous/ComfyUI) running with GPU access
 - At least one diffusion model installed
 
-> See [Getting Started](docs/getting-started.md) for more detailed instructions, tested models, VRAM requirements, and CLIP/VAE setup for Flux models, etc.
+> See [Getting Started](docs/getting-started.md) for Claude Code, [Cursor setup](docs/cursor.md) for Composer, and [NervSys firewall](docs/nervsys-firewall.md) for bared access.
 
 ### Option 1: npx (recommended)
 
@@ -68,12 +69,13 @@ npx claude-imagine@latest
 
 The interactive installer will:
 
-1. Ask for install scope (global or per-project)
-2. Copy skills, commands, and rules to your Claude Code config
-3. Detect your ComfyUI server and discover installed models
-4. Let you select which models to use for generation (model pinning)
-5. Assign quality tiers to selected models
-6. Generate config and register the MCP server
+1. Ask for IDE target (Claude Code, Cursor, or both)
+2. Ask for install scope (global or per-project)
+3. Copy skills, commands, and rules (Claude Code) and/or Cursor MCP config
+4. Detect your ComfyUI server and discover installed models
+5. Let you select which models to use for generation (model pinning)
+6. Assign quality tiers to selected models
+7. Generate config and register the MCP server
 
 > **Tip — local scope:** Run `npx claude-imagine@latest` from inside the project you want to install into. `npx` uses your current directory automatically — no path entry needed. This is the main advantage of `npx` over the from-source install for per-project setups.
 
@@ -216,6 +218,8 @@ Config file: `~/.config/claude-imagine/config.json` (auto-generated during setup
 | Variable | Description |
 |----------|-------------|
 | `IMAGINE_SERVER_URL` | Override server URL |
+| `IMAGINE_SERVER_TOKEN` | Bearer token for authenticated gateways |
+| `IMAGINE_TLS_INSECURE` | `1` or `true` to trust self-signed/internal TLS |
 | `IMAGINE_BACKEND` | Override backend (default: `comfyui`) |
 | `IMAGINE_OUTPUT_DIR` | Override output directory |
 | `IMAGINE_CONFIG` | Override config file path |

@@ -1,7 +1,9 @@
 {
   "backend": "comfyui",
   "server": {
-    "url": "http://localhost:8188"
+    "url": "http://localhost:8188",
+    "token": "",
+    "tlsInsecure": false
   },
   "models": {
     "sdxl_lightning_4step": {

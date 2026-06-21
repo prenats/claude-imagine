@@ -69,7 +69,7 @@ detail()  { echo -e "    ${DIM}$*${RESET}"; }
 print_banner() {
     echo ""
     echo -e "  ${BOLD}claude-imagine${RESET} ${DIM}v${VERSION}${RESET}"
-    echo -e "  ${DIM}AI image generation for Claude Code${RESET}"
+    echo -e "  ${DIM}AI image generation for Claude Code and Cursor${RESET}"
     echo ""
 }
 

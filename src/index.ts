@@ -8,6 +8,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { ConnectionError, GenerationError, TimeoutError } from './errors.js';
 import { CONFIG } from './config.js';
+import { configureServerTransport } from './server-transport.js';
 import { generateSingle } from './generate.js';
 import { IMAGE_TYPE_DEFAULTS } from './image-types.js';
 import { Style, Mood, Composition, Lighting } from './models.js';
@@ -16,6 +17,11 @@ import { Style, Mood, Composition, Lighting } from './models.js';
 import './backends/comfyui/index.js';
 
 import { getBackend } from './backends/registry.js';
+
+configureServerTransport({
+  token: CONFIG.serverToken,
+  tlsInsecure: CONFIG.tlsInsecure,
+});
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'));

@@ -86,14 +86,13 @@ describe('queuePrompt', () => {
 
     await queuePrompt({ node: 'data' }, BASE_URL);
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      `${BASE_URL}/prompt`,
-      expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ prompt: { node: 'data' } }),
-      }),
-    );
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${BASE_URL}/prompt`);
+    expect(init.method).toBe('POST');
+    expect(init.body).toBe(JSON.stringify({ prompt: { node: 'data' } }));
+    const headers = init.headers as Headers;
+    expect(headers.get('Content-Type')).toBe('application/json');
   });
 
   it('throws GenerationError on non-OK response', async () => {

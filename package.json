@@ -1,7 +1,7 @@
 {
   "name": "claude-imagine",
-  "version": "0.2.0",
-  "description": "MCP server for generating images in Claude Code — supports local image generation tools like ComfyUI and other backends",
+  "version": "0.3.0",
+  "description": "MCP server for generating images in Claude Code and Cursor — supports local image generation tools like ComfyUI and other backends",
   "type": "module",
   "license": "MIT",
   "author": "prenats",
@@ -18,6 +18,8 @@
     "mcp-server",
     "claude",
     "claude-code",
+    "cursor",
+    "composer",
     "image-generation",
     "stable-diffusion",
     "flux",
@@ -46,7 +48,9 @@
     "skills/",
     "commands/",
     "rules/",
+    "cursor/",
     "config.example.json",
+    "config.bared.example.json",
     "LICENSE",
     "README.md"
   ],
