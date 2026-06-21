@@ -1,0 +1,55 @@
+name: npm auth diagnose
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20 (current publish config)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Versions (node 20)
+        run: |
+          node -v
+          npm -v
+
+      - name: npm whoami with NPM_TOKEN (node 20)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm whoami || echo "WHOAMI_FAILED=1"
+
+      - name: Setup Node 24 + latest npm
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - run: npm install -g npm@latest
+
+      - name: Versions (node 24)
+        run: |
+          node -v
+          npm -v
+
+      - name: npm whoami with NPM_TOKEN (node 24)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm whoami || echo "WHOAMI_FAILED=1"
+
+      - name: npm whoami without NPM_TOKEN (trusted publishing / OIDC only)
+        env:
+          NODE_AUTH_TOKEN: ''
+        run: |
+          npm whoami || echo "WHOAMI_OIDC_FAILED=1"
